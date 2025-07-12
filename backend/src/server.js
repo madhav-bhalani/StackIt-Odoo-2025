@@ -19,6 +19,7 @@ const errorHandler = require("./middleware/errorHandler");
 const notFound = require("./middleware/notFound");
 
 const app = express();
+app.set("trust proxy", 1);
 const prisma = new PrismaClient();
 
 // Middleware

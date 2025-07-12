@@ -57,7 +57,8 @@ class AIController {
       if (!title || !description) {
         return sendError(res, 400, "Title and description are required");
       }
-      const tags = await aiService.autoGenerateTags(title, description);
+      const questionText = `${title}\n${description}`;
+      const tags = await aiService.generateTags(questionText);
       return sendSuccess(res, 200, { tags }, "Tags generated successfully");
     } catch (error) {
       console.error("Auto-tag error:", error);
