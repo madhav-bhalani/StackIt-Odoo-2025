@@ -1,0 +1,174 @@
+openapi: 3.0.0
+info:
+  title: StackIt Answers API
+  version: 1.0.0
+  description: Endpoints for creating, retrieving, updating, deleting, and voting on answers.
+servers:
+  - url: http://localhost:5000/api
+paths:
+  /answers:
+    post:
+      summary: Create a new answer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content, questionId]
+              properties:
+                content: { type: string }
+                questionId: { type: string }
+      responses:
+        "201":
+          description: Answer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResponse"
+  /answers/question/{id}:
+    get:
+      summary: Get all answers for a question
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswersListResponse"
+  /answers/{id}:
+    put:
+      summary: Update an answer (owner only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string }
+      responses:
+        "200":
+          description: Answer updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResponse"
+        "403":
+          description: Forbidden (not owner)
+        "404":
+          description: Answer not found
+    delete:
+      summary: Delete an answer (owner only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Answer deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerResponse"
+        "403":
+          description: Forbidden (not owner)
+        "404":
+          description: Answer not found
+  /answers/{id}/vote:
+    post:
+      summary: Vote on an answer (upvote or downvote)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [voteType]
+              properties:
+                voteType:
+                  type: string
+                  enum: [UP, DOWN]
+      responses:
+        "200":
+          description: Vote registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnswerVoteResponse"
+        "404":
+          description: Answer not found
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+    Answer:
+      type: object
+      properties:
+        id: { type: string }
+        content: { type: string }
+        isAccepted: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        user: { $ref: "#/components/schemas/User" }
+    AnswersListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Answer" }
+        message: { type: string }
+    AnswerResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/Answer" }
+        message: { type: string }
+    AnswerVoteResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            answerId: { type: string }
+            upvotes: { type: integer }
+            downvotes: { type: integer }
+            userVote: { type: string }
+        message: { type: string }
