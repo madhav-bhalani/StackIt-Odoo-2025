@@ -1,97 +1,143 @@
 /**
  * AI Service for StackIt
- * This service will integrate with AI functions provided by a colleague
+ * This service integrates with Google AI Studio API (Gemini) for AI-powered features
  */
 
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Initialize Google AI with API key from environment variables
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+
 /**
- * Generate AI answer for a question
- * @param {string} questionTitle - Question title
- * @param {string} questionDescription - Question description
- * @param {string[]} tags - Question tags
- * @returns {Promise<string>} AI generated answer
+ * Function 1: Generate AI answer for a user question
+ * @param {string} userQuestion - The user's question about any topic
+ * @returns {Promise<string>} AI generated response from Gemini
  */
-const generateAIAnswer = async (questionTitle, questionDescription, tags) => {
+const generateAIAnswer = async (userQuestion) => {
   try {
-    // TODO: Integrate with colleague's AI function
-    // This will be replaced with actual AI integration
-    
-    // Placeholder implementation
-    const prompt = `Question: ${questionTitle}\n\nDescription: ${questionDescription}\n\nTags: ${tags.join(', ')}\n\nPlease provide a helpful answer to this question.`;
-    
-    // TODO: Call colleague's AI function here
-    // const aiResponse = await callGeminiAPI(prompt);
-    
-    // For now, return a placeholder response
-    return `This is a placeholder AI answer for the question: "${questionTitle}". The actual AI integration will be implemented by a colleague.`;
+    if (!userQuestion || typeof userQuestion !== 'string') {
+      throw new Error('Invalid question: must be a non-empty string');
+    }
+
+    // Create the model instance
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    // Construct the prompt with the user's question
+    const prompt = `You are a helpful AI assistant. Please provide a comprehensive and accurate answer to the following question. Make sure your response is well-structured, informative, and helpful.
+
+Question: ${userQuestion}
+
+Please provide a detailed answer:`;
+
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('Empty response from AI service');
+    }
+
+    return text.trim();
   } catch (error) {
     console.error('Error generating AI answer:', error);
-    throw new Error('Failed to generate AI answer');
+    throw new Error(`Failed to generate AI answer: ${error.message}`);
   }
 };
 
 /**
- * Auto-generate tags based on question content
- * @param {string} questionTitle - Question title
- * @param {string} questionDescription - Question description
- * @returns {Promise<string[]>} Array of suggested tags
+ * Function 2: Generate 15 tags based on user question
+ * @param {string} userQuestion - The user's question
+ * @returns {Promise<string[]>} Array of 15 tags (first 5 most relevant)
  */
-const autoGenerateTags = async (questionTitle, questionDescription) => {
+const generateTags = async (userQuestion) => {
   try {
-    // TODO: Integrate with colleague's AI function
-    // This will be replaced with actual AI integration
-    
-    // Placeholder implementation
-    const prompt = `Based on this question, suggest relevant tags:\n\nTitle: ${questionTitle}\n\nDescription: ${questionDescription}\n\nPlease suggest 3-5 relevant tags.`;
-    
-    // TODO: Call colleague's AI function here
-    // const aiResponse = await callGeminiAPI(prompt);
-    
-    // For now, return some basic tags based on common keywords
-    const commonTags = ['javascript', 'react', 'nodejs', 'database', 'api', 'frontend', 'backend'];
-    const suggestedTags = commonTags.filter(tag => 
-      questionTitle.toLowerCase().includes(tag) || 
-      questionDescription.toLowerCase().includes(tag)
-    );
-    
-    return suggestedTags.slice(0, 3);
+    if (!userQuestion || typeof userQuestion !== 'string') {
+      throw new Error('Invalid question: must be a non-empty string');
+    }
+
+    // Create the model instance
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    // Construct the prompt for tag generation
+    const prompt = `Based on the following question, generate exactly 15 relevant tags. The first 5 tags should be the most relevant and important for this question. Return only the tags separated by commas, no additional text or formatting.
+
+Question: ${userQuestion}
+
+Tags:`;
+
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('Empty response from AI service');
+    }
+
+    // Parse and clean the tags
+    const tags = text
+      .trim()
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0)
+      .slice(0, 15); // Ensure we only get 15 tags
+
+    if (tags.length === 0) {
+      throw new Error('No valid tags generated');
+    }
+
+    return tags;
   } catch (error) {
-    console.error('Error auto-generating tags:', error);
-    throw new Error('Failed to auto-generate tags');
+    console.error('Error generating tags:', error);
+    throw new Error(`Failed to generate tags: ${error.message}`);
   }
 };
 
 /**
- * Summarize content (question or answer)
- * @param {string} content - Content to summarize
+ * Function 3: Summarize content (question or answer)
+ * @param {string} content - The content to summarize
  * @param {string} contentType - Type of content ('question' or 'answer')
  * @returns {Promise<string>} Summarized content
  */
 const summarizeContent = async (content, contentType = 'question') => {
   try {
-    // TODO: Integrate with colleague's AI function
-    // This will be replaced with actual AI integration
-    
-    // Placeholder implementation
-    const prompt = `Please provide a brief summary of this ${contentType}:\n\n${content}`;
-    
-    // TODO: Call colleague's AI function here
-    // const aiResponse = await callGeminiAPI(prompt);
-    
-    // For now, return a simple summary
-    const maxLength = 200;
-    if (content.length <= maxLength) {
-      return content;
+    if (!content || typeof content !== 'string') {
+      throw new Error('Invalid content: must be a non-empty string');
     }
-    
-    return content.substring(0, maxLength) + '...';
+
+    if (!['question', 'answer'].includes(contentType)) {
+      throw new Error('Invalid content type: must be "question" or "answer"');
+    }
+
+    // Create the model instance
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    // Construct the prompt for summarization
+    const prompt = `Please provide a clear and concise summary of the following ${contentType}. The summary should capture the main points and key information while being easy to understand.
+
+${contentType.charAt(0).toUpperCase() + contentType.slice(1)}: ${content}
+
+Summary:`;
+
+    // Generate content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    if (!text || text.trim().length === 0) {
+      throw new Error('Empty response from AI service');
+    }
+
+    return text.trim();
   } catch (error) {
     console.error('Error summarizing content:', error);
-    throw new Error('Failed to summarize content');
+    throw new Error(`Failed to summarize content: ${error.message}`);
   }
 };
 
 /**
- * Validate AI response
+ * Helper function to validate AI response
  * @param {string} response - AI response to validate
  * @returns {boolean} Whether response is valid
  */
@@ -112,7 +158,7 @@ const validateAIResponse = (response) => {
 };
 
 /**
- * Rate limiting for AI requests
+ * Helper function to check AI rate limit
  * @param {string} userId - User ID
  * @returns {Promise<boolean>} Whether request is allowed
  */
@@ -130,7 +176,7 @@ const checkAIRateLimit = async (userId) => {
 };
 
 /**
- * Log AI operation for monitoring
+ * Helper function to log AI operation for monitoring
  * @param {string} operation - Type of AI operation
  * @param {string} userId - User ID
  * @param {Object} metadata - Additional metadata
@@ -152,7 +198,7 @@ const logAIOperation = async (operation, userId, metadata = {}) => {
 
 module.exports = {
   generateAIAnswer,
-  autoGenerateTags,
+  generateTags,
   summarizeContent,
   validateAIResponse,
   checkAIRateLimit,
