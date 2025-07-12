@@ -1,0 +1,225 @@
+# StackIt - Q&A Platform Development Rules
+
+## Project Overview
+StackIt is a minimal question-and-answer platform supporting collaborative learning and structured knowledge sharing. Built with Vite + React, Chakra UI, and JWT authentication.
+
+## Tech Stack
+- **Frontend**: Vite + React
+- **UI Framework**: Chakra UI
+- **Routing**: React Router DOM
+- **HTTP Client**: Axios
+- **State Management**: React Context (User Data)
+- **AI Integration**: Gemini API (Backend)
+
+## Color Theme (Odoo-Inspired)
+```css
+Primary Accent: #714B67 (Odoo Purple)
+Light Accent: #f5f3f7 (Light purple background)
+Background: #f9fafb (Light gray background)
+Card: #ffffff (White)
+Text (Dark): #1f2937 (Dark gray)
+Text (Muted): #6b7280 (Medium gray)
+Borders: #e5e7eb (Light gray)
+Success: #16a34a (Green)
+Warning: #f59e0b (Yellow)
+```
+
+### Tailwind CSS Classes
+| Use Case           | Tailwind Class    | Color Example           |
+| ------------------ | ----------------- | ----------------------- |
+| **Primary Accent** | `text-purple-600` | `#714B67` (Odoo Purple) |
+| **Light Accent**   | `bg-purple-50`    | `#f5f3f7`               |
+| **Background**     | `bg-gray-50`      | `#f9fafb`               |
+| **Card**           | `bg-white`        | `#ffffff`               |
+| **Text (Dark)**    | `text-gray-800`   | `#1f2937`               |
+| **Text (Muted)**   | `text-gray-500`   | `#6b7280`               |
+| **Borders**        | `border-gray-200` | `#e5e7eb`               |
+| **Success**        | `text-green-600`  | `#16a34a`               |
+| **Warning**        | `text-yellow-500` | `#f59e0b`               |
+
+## User Roles & Permissions
+
+### Guest
+- View all questions and answers
+
+### User (Authenticated)
+- Register/Login
+- Post questions and answers
+- Vote (upvote/downvote)
+- Mark answers as accepted (question owner)
+- Receive notifications
+
+### Admin
+- Moderate content
+
+## Core Features (Must-Have)
+
+### 1. Ask Question
+- Title (short and descriptive)
+- Description (rich text editor)
+- Tags (multi-select input)
+- Submit button
+
+### 2. Rich Text Editor Features
+- Bold, Italic, Strikethrough
+- Numbered lists, Bullet points
+- Emoji insertion
+- Hyperlink insertion (URL)
+- Image upload
+- Text alignment (Left, Center, Right)
+
+### 3. Answering Questions
+- Post answers to any question
+- Same rich text editor formatting
+- Only logged-in users can post
+
+### 4. Voting & Accepting Answers
+- Upvote/downvote answers
+- Question owners can mark one answer as accepted
+
+### 5. Tagging
+- Questions must include relevant tags
+
+### 6. Notification System
+- Bell icon in top navigation
+- Notifications for:
+  - Someone answers their question
+  - Someone comments on their answer
+  - Someone mentions them (@username)
+- Shows unread count
+- Dropdown with recent notifications
+
+## AI Features (Gemini Integration)
+
+### Feature 1: AI Answer Generation
+- Visible only to question owner
+- Generates AI response when clicked
+- AI answer appears as "AI User" response
+- Can be upvoted/downvoted like regular answers
+
+### Feature 2: Auto Tagging
+- Auto-generate relevant tags based on question content
+- Gemini response for tag suggestions
+
+### Feature 3: Summarize
+- Summarize button for each question and answer
+- Generates summary when clicked
+
+## Screen Structure
+
+### Screen 1: Home Page
+- Navbar (responsive, toggle)
+  - Login/Logout
+  - Search bar
+  - Ask new question tab
+  - Filter tabs
+  - Notification bell
+- Question/Answer cards display
+
+### Screen 2: Ask Question
+- Title input
+- Rich text description editor
+- Tags input (multi-select)
+- Submit button
+
+### Screen 3: Question Detail
+- Question display
+- Upvote/downvote functionality
+- Answer submission form
+- All answers with voting
+
+### Screen 4: Register
+- Email input
+- Password input
+- No email verification required
+
+### Screen 5: Login
+- Email input
+- Password input
+- JWT token authentication
+
+## Folder Structure
+```
+src/
+├── pages/           # Screen components
+├── components/      # Reusable components
+├── layout/         # Layout components (React Router DOM)
+├── routes.jsx      # Route definitions
+├── context/        # Context providers
+├── services/       # API calls (Axios)
+├── utils/          # Utility functions
+└── hooks/          # Custom hooks
+```
+
+## Development Guidelines
+
+### Component Structure
+- Use Chakra UI components consistently
+- Implement loader states for async operations
+- Add error states where needed
+- Make all components responsive (mobile + desktop)
+
+### State Management
+- Use central User Data Context to wrap entire app
+- Easy access to user data throughout components
+
+### Layout Structure
+- Use React Router DOM Outlet layout
+- Fixed navbar at top
+- Content area below navbar
+
+### API Integration
+- Use Axios for all API calls
+- Implement proper error handling
+- Add loading states for all async operations
+
+### Responsive Design
+- Mobile-first approach
+- Toggle responsive navbar
+- Ensure all components work on mobile and desktop
+
+### Code Quality
+- Add proper TypeScript types (if using TS)
+- Implement proper error boundaries
+- Use consistent naming conventions
+- Add comments for complex logic
+
+## File Naming Conventions
+- Components: PascalCase (e.g., `QuestionCard.jsx`)
+- Pages: PascalCase (e.g., `HomePage.jsx`)
+- Utilities: camelCase (e.g., `apiService.js`)
+- Constants: UPPER_SNAKE_CASE (e.g., `API_ENDPOINTS.js`)
+
+## Component Guidelines
+- Keep components focused and single-purpose
+- Use Chakra UI theme colors consistently
+- Implement proper loading and error states
+- Make components reusable where possible
+- Add proper accessibility attributes
+
+## API Structure
+- Use Axios interceptors for JWT token handling
+- Implement proper error handling
+- Add request/response logging for debugging
+- Use environment variables for API endpoints
+
+## Testing Considerations
+- Test all user flows
+- Test responsive design on different screen sizes
+- Test error states and edge cases
+- Test AI features integration
+- Test notification system
+
+## Performance Considerations
+- Implement proper loading states
+- Use React.memo for expensive components
+- Optimize images and assets
+- Implement proper caching strategies
+- Use lazy loading for routes
+
+## Security Considerations
+- Secure JWT token storage
+- Validate all user inputs
+- Implement proper CORS handling
+- Sanitize rich text content
+- Protect against XSS attacks 
