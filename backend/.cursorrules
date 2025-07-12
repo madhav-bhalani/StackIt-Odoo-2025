@@ -1,0 +1,191 @@
+# StackIt Backend - Cursor Rules
+
+## Project Overview
+This is the backend for StackIt, a Q&A platform with collaborative learning features. Built with Node.js, Express.js, PostgreSQL, and Prisma ORM.
+
+## Architecture Guidelines
+
+### MVC Pattern
+- **Controllers**: Handle HTTP requests/responses, input validation, and call services
+- **Models**: Business logic and data operations using Prisma
+- **Routes**: Define API endpoints and connect to controllers
+- **Services**: Complex business logic, external API calls, and data processing
+- **Middleware**: Authentication, validation, error handling, and utilities
+
+### File Structure
+```
+src/
+├── controllers/     # Request handlers (authController.js, questionController.js, etc.)
+├── models/         # Business logic and data operations
+├── routes/         # API route definitions
+├── middleware/     # Custom middleware (auth, validation, error handling)
+├── services/       # Business logic & external services (AI integration)
+├── utils/          # Utility functions and helpers
+└── config/         # Configuration files
+```
+
+## Coding Standards
+
+### General Rules
+1. **Use ES6+ features**: const/let, arrow functions, destructuring, async/await
+2. **Follow RESTful conventions**: GET, POST, PUT, DELETE with proper status codes
+3. **Implement proper error handling**: Use try-catch blocks and custom error classes
+4. **Add JSDoc comments**: Document all functions, parameters, and return values
+5. **Use meaningful variable names**: Descriptive names that explain purpose
+6. **Keep functions small**: Single responsibility principle
+7. **Use TypeScript-like comments**: Add type hints in JSDoc for better IDE support
+
+### Database Operations
+1. **Always use Prisma**: No raw SQL unless absolutely necessary
+2. **Handle transactions**: Use Prisma transactions for multi-table operations
+3. **Validate data**: Use express-validator for input validation
+4. **Optimize queries**: Use Prisma's include, select, and where efficiently
+5. **Handle errors gracefully**: Catch Prisma errors and return user-friendly messages
+
+### Authentication & Security
+1. **JWT tokens**: Use jsonwebtoken for authentication
+2. **Password hashing**: Use bcryptjs for password security
+3. **Input validation**: Validate all user inputs
+4. **Rate limiting**: Implement rate limiting on sensitive endpoints
+5. **CORS**: Configure CORS properly for frontend integration
+6. **Helmet**: Use helmet for security headers
+
+### API Response Format
+```javascript
+// Success response
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operation successful"
+}
+
+// Error response
+{
+  "success": false,
+  "error": "Error message",
+  "statusCode": 400
+}
+```
+
+## Specific Implementation Guidelines
+
+### Controllers
+- Keep controllers thin - delegate business logic to services
+- Handle HTTP-specific concerns (status codes, headers, etc.)
+- Use async/await for all database operations
+- Implement proper error handling with try-catch
+
+### Services
+- Contain business logic and complex operations
+- Handle external API calls (AI integration)
+- Use dependency injection where appropriate
+- Implement proper error handling and logging
+
+### Middleware
+- Create reusable middleware for common operations
+- Implement authentication middleware using JWT
+- Add validation middleware for request data
+- Create error handling middleware
+
+### AI Integration
+- Create separate service for AI operations
+- Handle API rate limits and errors gracefully
+- Implement caching for AI responses when appropriate
+- Log AI operations for monitoring
+
+## Database Schema Guidelines
+
+### Models to Implement
+1. **User**: email, password, role, timestamps
+2. **Question**: title, description, userId, tags, timestamps
+3. **Answer**: content, userId, questionId, isAccepted, timestamps
+4. **Vote**: userId, questionId/answerId, voteType, timestamps
+5. **Tag**: name, timestamps
+6. **QuestionTag**: Many-to-many relationship
+7. **Notification**: userId, type, content, isRead, timestamps
+
+### Relationships
+- User has many Questions, Answers, Votes, Notifications
+- Question belongs to User, has many Answers, Votes, Tags
+- Answer belongs to User and Question, has many Votes
+- Vote belongs to User and either Question or Answer
+- Tag has many Questions through QuestionTag
+
+## API Endpoints to Implement
+
+### Authentication
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/logout
+- GET /api/auth/me
+
+### Questions
+- GET /api/questions (with filters)
+- POST /api/questions
+- GET /api/questions/:id
+- PUT /api/questions/:id
+- DELETE /api/questions/:id
+- POST /api/questions/:id/vote
+
+### Answers
+- GET /api/answers
+- POST /api/answers
+- PUT /api/answers/:id
+- DELETE /api/answers/:id
+- POST /api/answers/:id/vote
+- POST /api/answers/:id/accept
+
+### AI Features
+- POST /api/ai/questions/:id/answer
+- POST /api/ai/questions/auto-tags
+- POST /api/ai/content/summarize
+
+### Notifications
+- GET /api/notifications
+- PUT /api/notifications/:id/read
+- PUT /api/notifications/read-all
+
+## Environment Variables
+- PORT, NODE_ENV
+- DATABASE_URL
+- JWT_SECRET, JWT_EXPIRES_IN
+- GEMINI_API_KEY (for AI features)
+- CORS_ORIGIN
+- Rate limiting settings
+
+## Testing Guidelines
+- Write unit tests for services and utilities
+- Write integration tests for API endpoints
+- Use Jest for testing framework
+- Mock external dependencies (AI APIs)
+
+## Performance Considerations
+- Implement pagination for list endpoints
+- Use database indexes for frequently queried fields
+- Implement caching for static data
+- Optimize database queries with Prisma
+- Use compression middleware
+
+## Security Best Practices
+- Validate all inputs
+- Sanitize user-generated content
+- Implement proper CORS configuration
+- Use HTTPS in production
+- Rate limit sensitive endpoints
+- Log security events
+
+## Deployment Considerations
+- Use environment variables for configuration
+- Implement health check endpoints
+- Add proper logging
+- Handle graceful shutdown
+- Use PM2 or similar for process management
+
+## AI Integration Notes
+- The AI functions will be provided by a colleague
+- Integrate them into the appropriate endpoints
+- Handle API errors and rate limits
+- Cache responses when appropriate
+- Log AI operations for monitoring
+
+Remember: This is a collaborative project. Follow these guidelines to ensure code consistency and maintainability across the team. 
