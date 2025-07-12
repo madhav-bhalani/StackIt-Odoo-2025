@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 200px;
+  padding: 1rem;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.ProseMirror p {
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin: 1rem 0 0.5rem 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.ProseMirror h1 { font-size: 1.875rem; }
+.ProseMirror h2 { font-size: 1.5rem; }
+.ProseMirror h3 { font-size: 1.25rem; }
+.ProseMirror h4 { font-size: 1.125rem; }
+.ProseMirror h5 { font-size: 1rem; }
+.ProseMirror h6 { font-size: 0.875rem; }
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.ProseMirror li {
+  margin: 0.25rem 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  margin: 1rem 0;
+  padding-left: 1rem;
+  font-style: italic;
+  color: #6b7280;
+}
+
+.ProseMirror code {
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+.ProseMirror pre {
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.ProseMirror pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+.ProseMirror a {
+  color: #714B67;
+  text-decoration: underline;
+}
+
+.ProseMirror a:hover {
+  color: #5a3b52;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.ProseMirror .is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Text alignment classes */
+.ProseMirror .text-left {
+  text-align: left;
+}
+
+.ProseMirror .text-center {
+  text-align: center;
+}
+
+.ProseMirror .text-right {
+  text-align: right;
+}
+
+/* Focus styles */
+.ProseMirror:focus {
+  outline: none;
+}
+
+/* Selection styles */
+.ProseMirror ::selection {
+  background-color: #714B67;
+  color: white;
+}
+
+/* Placeholder styles */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+}
