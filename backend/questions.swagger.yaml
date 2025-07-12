@@ -1,0 +1,227 @@
+openapi: 3.0.0
+info:
+  title: StackIt Questions API
+  version: 1.0.0
+  description: Endpoints for creating, retrieving, updating, deleting, and voting on questions.
+servers:
+  - url: http://localhost:5000/api
+paths:
+  /questions:
+    get:
+      summary: Get all questions
+      description: Returns a paginated list of questions. Supports search and tag filtering.
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Search query for title/description
+        - in: query
+          name: tags
+          schema: { type: string }
+          description: Comma-separated list of tags
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionsListResponse"
+    post:
+      summary: Create a new question
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, description, tags]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+      responses:
+        "201":
+          description: Question created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionResponse"
+  /questions/{id}:
+    get:
+      summary: Get a question by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Question found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionResponse"
+        "404":
+          description: Question not found
+    put:
+      summary: Update a question
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                tags:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200":
+          description: Question updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionResponse"
+        "403":
+          description: Forbidden (not owner or admin)
+        "404":
+          description: Question not found
+    delete:
+      summary: Delete a question
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Question deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionResponse"
+        "403":
+          description: Forbidden (not owner or admin)
+        "404":
+          description: Question not found
+  /questions/{id}/vote:
+    post:
+      summary: Vote on a question (upvote or downvote)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [voteType]
+              properties:
+                voteType:
+                  type: string
+                  enum: [UP, DOWN]
+      responses:
+        "200":
+          description: Vote registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionVoteResponse"
+        "404":
+          description: Question not found
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+    Tag:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+    Question:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        user: { $ref: "#/components/schemas/User" }
+        tags:
+          type: array
+          items:
+            type: object
+            properties:
+              tag: { $ref: "#/components/schemas/Tag" }
+    QuestionsListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            questions:
+              type: array
+              items: { $ref: "#/components/schemas/Question" }
+            pagination:
+              type: object
+              properties:
+                page: { type: integer }
+                limit: { type: integer }
+                total: { type: integer }
+                pages: { type: integer }
+        message: { type: string }
+    QuestionResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { $ref: "#/components/schemas/Question" }
+        message: { type: string }
+    QuestionVoteResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            questionId: { type: string }
+            upvotes: { type: integer }
+            downvotes: { type: integer }
+            userVote: { type: string }
+        message: { type: string }
