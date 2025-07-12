@@ -23,7 +23,8 @@ model User {
   // Relations
   questions     Question[]
   answers       Answer[]
-  votes         Vote[]
+  questionVotes QuestionVote[]
+  answerVotes   AnswerVote[]
   notifications Notification[]
 
   @@map("users")
@@ -40,7 +41,7 @@ model Question {
   userId   String
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers  Answer[]
-  votes    Vote[]
+  votes    QuestionVote[]
   tags     QuestionTag[]
 
   @@map("questions")
@@ -58,26 +59,35 @@ model Answer {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   questionId String
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  votes      Vote[]
+  votes      AnswerVote[]
 
   @@map("answers")
 }
 
-model Vote {
-  id        String   @id @default(cuid())
-  voteType  VoteType
-  createdAt DateTime @default(now())
-
-  // Relations
+model QuestionVote {
+  id         String   @id @default(cuid())
+  voteType   VoteType
+  createdAt  DateTime @default(now())
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  questionId String?
-  question   Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  answerId   String?
-  answer     Answer?  @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, questionId, answerId])
-  @@map("votes")
+  @@unique([userId, questionId])
+  @@map("question_votes")
+}
+
+model AnswerVote {
+  id         String   @id @default(cuid())
+  voteType   VoteType
+  createdAt  DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answerId   String
+  answer     Answer   @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, answerId])
+  @@map("answer_votes")
 }
 
 model Tag {
