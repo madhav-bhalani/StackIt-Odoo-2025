@@ -45,6 +45,18 @@ async function main() {
     },
   });
 
+  const aiUser = await prisma.user.upsert({
+    where: { email: "ai@stackit.com" },
+    update: {},
+    create: {
+      email: "ai@stackit.com",
+      firstName: "AI",
+      lastName: "User",
+      password: hashedPassword,
+      role: "USER",
+    },
+  });
+
   // Create sample tags
   const tags = await Promise.all([
     prisma.tag.upsert({
