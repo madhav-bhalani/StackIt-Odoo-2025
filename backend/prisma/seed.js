@@ -14,6 +14,8 @@ async function main() {
     update: {},
     create: {
       email: 'john@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
       password: hashedPassword,
       role: 'USER'
     }
@@ -24,6 +26,8 @@ async function main() {
     update: {},
     create: {
       email: 'jane@example.com',
+      firstName: 'Jane',
+      lastName: 'Smith',
       password: hashedPassword,
       role: 'USER'
     }
@@ -34,6 +38,8 @@ async function main() {
     update: {},
     create: {
       email: 'admin@stackit.com',
+      firstName: 'Admin',
+      lastName: 'User',
       password: hashedPassword,
       role: 'ADMIN'
     }
