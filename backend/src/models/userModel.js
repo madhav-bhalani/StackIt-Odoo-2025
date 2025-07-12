@@ -12,13 +12,15 @@ class UserModel {
    * Create a new user
    * @param {Object} userData - User data
    * @param {string} userData.email - User email
+   * @param {string} userData.firstName - User first name
+   * @param {string} userData.lastName - User last name
    * @param {string} userData.password - User password
    * @param {string} userData.role - User role (default: USER)
    * @returns {Promise<Object>} Created user (without password)
    */
   static async createUser(userData) {
     try {
-      const { email, password, role = 'USER' } = userData;
+      const { email, firstName, lastName, password, role = 'USER' } = userData;
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -36,12 +38,16 @@ class UserModel {
       const user = await prisma.user.create({
         data: {
           email,
+          firstName,
+          lastName,
           password: hashedPassword,
           role
         },
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           role: true,
           createdAt: true,
           updatedAt: true
@@ -66,6 +72,8 @@ class UserModel {
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           password: true,
           role: true,
           createdAt: true,
@@ -91,6 +99,8 @@ class UserModel {
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           role: true,
           createdAt: true,
           updatedAt: true
@@ -127,6 +137,8 @@ class UserModel {
       const payload = {
         userId: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
         role: user.role
       };
 
@@ -152,6 +164,8 @@ class UserModel {
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           role: true,
           createdAt: true,
           updatedAt: true
@@ -176,6 +190,8 @@ class UserModel {
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           role: true,
           createdAt: true,
           updatedAt: true
@@ -230,6 +246,8 @@ class UserModel {
           select: {
             id: true,
             email: true,
+            firstName: true,
+            lastName: true,
             role: true,
             createdAt: true,
             updatedAt: true
