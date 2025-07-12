@@ -1,38 +1,30 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const AIController = require("../controllers/aiController");
+const { authenticate } = require("../middleware/auth");
+const { authorizeOwner } = require("../middleware/auth");
 
-// TODO: Import controllers when created
-// const { 
-//   generateAIAnswer, 
-//   autoGenerateTags, 
-//   summarizeContent 
-// } = require('../controllers/aiController');
+// 1. Generate AI Answer (question owner only)
+router.post(
+  "/questions/:id/answer",
+  authenticate,
+  authorizeOwner(async (req) => {
+    const question = await require("../models/questionModel").getQuestionById(
+      req.params.id
+    );
+    return question ? question.userId : null;
+  }),
+  AIController.generateAIAnswer
+);
 
-/**
- * @route   POST /api/ai/questions/:id/answer
- * @desc    Generate AI answer for a question
- * @access  Private (question owner only)
- */
-router.post('/questions/:id/answer', (req, res) => {
-  res.status(501).json({ message: 'Generate AI answer endpoint - Not implemented yet' });
-});
+// 2. Auto-generate Tags (any authenticated user)
+router.post(
+  "/questions/auto-tags",
+  authenticate,
+  AIController.autoGenerateTags
+);
 
-/**
- * @route   POST /api/ai/questions/auto-tags
- * @desc    Auto-generate tags based on question content
- * @access  Private
- */
-router.post('/questions/auto-tags', (req, res) => {
-  res.status(501).json({ message: 'Auto-generate tags endpoint - Not implemented yet' });
-});
+// 3. Summarize Content (any authenticated user)
+router.post("/content/summarize", authenticate, AIController.summarizeContent);
 
-/**
- * @route   POST /api/ai/content/summarize
- * @desc    Summarize question or answer content
- * @access  Private
- */
-router.post('/content/summarize', (req, res) => {
-  res.status(501).json({ message: 'Summarize content endpoint - Not implemented yet' });
-});
-
-module.exports = router; 
+module.exports = router;
