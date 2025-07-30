@@ -1,6 +1,14 @@
 import axios from 'axios';
+import { 
+  transformQuestionForAPI, 
+  transformQuestionFromAPI,
+  transformAnswerForAPI,
+  transformAnswerFromAPI,
+  transformVoteType,
+  extractAPIData
+} from '../utils/dataTransformers';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -48,20 +56,103 @@ export const authAPI = {
 
 // Questions API
 export const questionsAPI = {
-  getAll: (params) => api.get('/questions', { params }),
-  getById: (id) => api.get(`/questions/${id}`),
-  create: (questionData) => api.post('/questions', questionData),
-  update: (id, questionData) => api.put(`/questions/${id}`, questionData),
+  getAll: async (params) => {
+    const response = await api.get('/questions', { params });
+    const data = extractAPIData(response);
+    
+    // Transform questions if they exist
+    if (data.questions && Array.isArray(data.questions)) {
+      data.questions = data.questions.map(transformQuestionFromAPI);
+    }
+    
+    return { ...response, data };
+  },
+  
+  getById: async (id) => {
+    const response = await api.get(`/questions/${id}`);
+    const data = extractAPIData(response);
+    
+    // Transform single question
+    const transformedQuestion = transformQuestionFromAPI(data);
+    
+    return { ...response, data: transformedQuestion };
+  },
+  
+  create: async (questionData) => {
+    const transformedData = transformQuestionForAPI(questionData);
+    const response = await api.post('/questions', transformedData);
+    const data = extractAPIData(response);
+    
+    // Transform created question
+    const transformedQuestion = transformQuestionFromAPI(data);
+    
+    return { ...response, data: transformedQuestion };
+  },
+  
+  update: async (id, questionData) => {
+    const transformedData = transformQuestionForAPI(questionData);
+    const response = await api.put(`/questions/${id}`, transformedData);
+    const data = extractAPIData(response);
+    
+    // Transform updated question
+    const transformedQuestion = transformQuestionFromAPI(data);
+    
+    return { ...response, data: transformedQuestion };
+  },
+  
   delete: (id) => api.delete(`/questions/${id}`),
-  vote: (id, voteType) => api.post(`/questions/${id}/vote`, { voteType }),
+  
+  vote: (id, voteType) => {
+    const transformedVoteType = transformVoteType(voteType);
+    return api.post(`/questions/${id}/vote`, { voteType: transformedVoteType });
+  },
 };
 
 // Answers API
 export const answersAPI = {
-  create: (questionId, answerData) => api.post(`/questions/${questionId}/answers`, answerData),
-  update: (id, answerData) => api.put(`/answers/${id}`, answerData),
+  create: async (answerData) => {
+    const transformedData = transformAnswerForAPI(answerData);
+    const response = await api.post('/answers', transformedData);
+    const data = extractAPIData(response);
+    
+    // Transform created answer
+    const transformedAnswer = transformAnswerFromAPI(data);
+    
+    return { ...response, data: transformedAnswer };
+  },
+  
+  getByQuestionId: async (questionId) => {
+    const response = await api.get(`/answers/question/${questionId}`);
+    const data = extractAPIData(response);
+    
+    // Transform answers if they exist
+    if (Array.isArray(data)) {
+      const transformedAnswers = data.map(transformAnswerFromAPI);
+      return { ...response, data: transformedAnswers };
+    }
+    
+    return { ...response, data: data || [] };
+  },
+  
+  update: async (id, answerData) => {
+    const transformedData = transformAnswerForAPI(answerData);
+    const response = await api.put(`/answers/${id}`, transformedData);
+    const data = extractAPIData(response);
+    
+    // Transform updated answer
+    const transformedAnswer = transformAnswerFromAPI(data);
+    
+    return { ...response, data: transformedAnswer };
+  },
+  
   delete: (id) => api.delete(`/answers/${id}`),
-  vote: (id, voteType) => api.post(`/answers/${id}/vote`, { voteType }),
+  
+  vote: (id, voteType) => {
+    const transformedVoteType = transformVoteType(voteType);
+    return api.post(`/answers/${id}/vote`, { voteType: transformedVoteType });
+  },
+  
+  // Note: Accept functionality needs to be implemented in backend
   accept: (id) => api.post(`/answers/${id}/accept`),
 };
 
@@ -73,9 +164,9 @@ export const tagsAPI = {
 
 // AI API
 export const aiAPI = {
-  generateAnswer: (questionId) => api.post(`/ai/generate-answer/${questionId}`),
-  suggestTags: (questionContent) => api.post('/ai/suggest-tags', { content: questionContent }),
-  summarize: (content) => api.post('/ai/summarize', { content }),
+  generateAnswer: (questionId) => api.post(`/ai/questions/${questionId}/answer`),
+  autoGenerateTags: (questionContent) => api.post('/ai/questions/auto-tags', { content: questionContent }),
+  summarizeContent: (content) => api.post('/ai/content/summarize', { content }),
 };
 
 // Notifications API
