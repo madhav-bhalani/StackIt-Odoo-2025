@@ -7,7 +7,7 @@
   - Implement proper error handling utilities for consistent API error management
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.3, 9.4, 9.5_
 
-- [ ] 2. Integrate Real Data in HomePage
+- [-] 2. Integrate Real Data in HomePage
   - Replace mock data with actual API calls to fetch questions from backend
   - Implement proper loading states and error handling for question fetching
   - Connect tab functionality (Latest, Popular, Unanswered) to backend filtering
