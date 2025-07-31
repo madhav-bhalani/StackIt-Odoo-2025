@@ -27,7 +27,16 @@ class QuestionController {
    */
   static async getAllQuestions(req, res) {
     try {
-      const { q, tags, page = 1, limit = 10 } = req.query;
+      const { 
+        q, 
+        tags, 
+        page = 1, 
+        limit = 10, 
+        sortBy = 'createdAt', 
+        order = 'desc', 
+        hasAnswers 
+      } = req.query;
+      
       const tagArr = tags
         ? Array.isArray(tags)
           ? tags
@@ -36,12 +45,17 @@ class QuestionController {
               .map((t) => t.trim())
               .filter(Boolean)
         : [];
+        
       const result = await QuestionModel.getAllQuestions({
         q,
         tags: tagArr,
         page: Number(page),
         limit: Number(limit),
+        sortBy,
+        order,
+        hasAnswers
       });
+      
       sendSuccess(res, 200, result, "Questions fetched successfully");
     } catch (error) {
       console.error("Get all questions error:", error);

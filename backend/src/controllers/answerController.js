@@ -88,6 +88,27 @@ class AnswerController {
       sendError(res, 500, "Failed to vote on answer");
     }
   }
+
+  /**
+   * Accept an answer (only question owner can accept)
+   */
+  static async acceptAnswer(req, res) {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id;
+      const result = await AnswerModel.acceptAnswer(id, userId);
+      sendSuccess(res, 200, result, "Answer accepted successfully");
+    } catch (error) {
+      if (error.message === "Answer not found") {
+        return sendError(res, 404, "Answer not found");
+      }
+      if (error.message === "Only question owner can accept answers") {
+        return sendError(res, 403, "Only question owner can accept answers");
+      }
+      console.error("Accept answer error:", error);
+      sendError(res, 500, "Failed to accept answer");
+    }
+  }
 }
 
 module.exports = AnswerController;

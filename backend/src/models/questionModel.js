@@ -49,9 +49,12 @@ class QuestionModel {
    * @param {string[]} [options.tags] - Filter by tags
    * @param {number} [options.page] - Page number
    * @param {number} [options.limit] - Items per page
+   * @param {string} [options.sortBy] - Sort field (createdAt, votes)
+   * @param {string} [options.order] - Sort order (asc, desc)
+   * @param {boolean} [options.hasAnswers] - Filter by answered/unanswered
    * @returns {Promise<Object>} Paginated questions
    */
-  static async getAllQuestions({ q, tags, page = 1, limit = 10 }) {
+  static async getAllQuestions({ q, tags, page = 1, limit = 10, sortBy = 'createdAt', order = 'desc', hasAnswers }) {
     const skip = (page - 1) * limit;
     // Build where clause
     const where = {};
@@ -70,23 +73,62 @@ class QuestionModel {
         },
       };
     }
+    if (hasAnswers !== undefined) {
+      if (hasAnswers === false || hasAnswers === 'false') {
+        where.answers = { none: {} };
+      } else if (hasAnswers === true || hasAnswers === 'true') {
+        where.answers = { some: {} };
+      }
+    }
+
+    // Build orderBy clause
+    let orderBy = { createdAt: order };
+    if (sortBy === 'votes') {
+      // For vote sorting, we'll need to handle this differently
+      // For now, we'll sort by createdAt and handle vote sorting in application logic
+      orderBy = { createdAt: order };
+    }
+
     const [questions, total] = await Promise.all([
       prisma.question.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy,
         include: {
           tags: { include: { tag: true } },
           user: {
             select: { id: true, firstName: true, lastName: true, email: true },
           },
+          votes: {
+            select: { userId: true, voteType: true }
+          },
+          answers: {
+            select: { id: true, isAccepted: true }
+          }
         },
       }),
       prisma.question.count({ where }),
     ]);
+
+    // Transform questions to include vote counts and answer counts
+    const transformedQuestions = questions.map(question => ({
+      ...question,
+      votesArray: question.votes,
+      votes: question.votes.reduce((score, vote) => score + (vote.voteType === 'UP' ? 1 : -1), 0),
+      answers: question.answers.length,
+      hasAcceptedAnswer: question.answers.some(answer => answer.isAccepted)
+    }));
+
+    // Sort by votes if requested
+    if (sortBy === 'votes') {
+      transformedQuestions.sort((a, b) => {
+        return order === 'desc' ? b.votes - a.votes : a.votes - b.votes;
+      });
+    }
+
     return {
-      questions,
+      questions: transformedQuestions,
       pagination: {
         page,
         limit,
@@ -102,15 +144,32 @@ class QuestionModel {
    * @returns {Promise<Object|null>} Question or null
    */
   static async getQuestionById(id) {
-    return prisma.question.findUnique({
+    const question = await prisma.question.findUnique({
       where: { id },
       include: {
         tags: { include: { tag: true } },
         user: {
           select: { id: true, firstName: true, lastName: true, email: true },
         },
+        votes: {
+          select: { userId: true, voteType: true }
+        },
+        answers: {
+          select: { id: true, isAccepted: true }
+        }
       },
     });
+
+    if (!question) return null;
+
+    // Transform question to include vote counts and answer counts
+    return {
+      ...question,
+      votesArray: question.votes,
+      votes: question.votes.reduce((score, vote) => score + (vote.voteType === 'UP' ? 1 : -1), 0),
+      answers: question.answers.length,
+      hasAcceptedAnswer: question.answers.some(answer => answer.isAccepted)
+    };
   }
 
   /**
@@ -194,33 +253,70 @@ class QuestionModel {
       where: { id: questionId },
     });
     if (!question) throw new Error("Question not found");
-    // Upsert vote in QuestionVote
-    const vote = await prisma.questionVote.upsert({
+    
+    // Check if user already has a vote
+    const existingVote = await prisma.questionVote.findUnique({
       where: {
         userId_questionId: {
           userId,
           questionId,
         },
       },
-      update: { voteType },
-      create: {
-        userId,
-        questionId,
-        voteType,
-      },
     });
-    // Count votes
-    const upvotes = await prisma.questionVote.count({
-      where: { questionId, voteType: "UP" },
+    
+    let userVote = null;
+    
+    if (existingVote) {
+      if (existingVote.voteType === voteType) {
+        // User is removing their vote (clicking same button)
+        await prisma.questionVote.delete({
+          where: {
+            userId_questionId: {
+              userId,
+              questionId,
+            },
+          },
+        });
+        userVote = null;
+      } else {
+        // User is changing their vote
+        const updatedVote = await prisma.questionVote.update({
+          where: {
+            userId_questionId: {
+              userId,
+              questionId,
+            },
+          },
+          data: { voteType },
+        });
+        userVote = updatedVote.voteType;
+      }
+    } else {
+      // User is casting a new vote
+      const newVote = await prisma.questionVote.create({
+        data: {
+          userId,
+          questionId,
+          voteType,
+        },
+      });
+      userVote = newVote.voteType;
+    }
+    
+    // Get all votes for this question
+    const allVotes = await prisma.questionVote.findMany({
+      where: { questionId },
+      select: { userId: true, voteType: true }
     });
-    const downvotes = await prisma.questionVote.count({
-      where: { questionId, voteType: "DOWN" },
-    });
+    
+    // Calculate vote score
+    const voteScore = allVotes.reduce((score, vote) => score + (vote.voteType === 'UP' ? 1 : -1), 0);
+    
     return {
       questionId,
-      upvotes,
-      downvotes,
-      userVote: vote.voteType,
+      votes: allVotes,
+      voteScore,
+      userVote,
     };
   }
 }

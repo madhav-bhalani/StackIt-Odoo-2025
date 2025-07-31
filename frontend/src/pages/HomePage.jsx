@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardFooter,
   Flex,
-  Spacer,
   Tabs,
   TabList,
   Tab,
@@ -28,11 +27,12 @@ import {
   AlertDescription,
   useToast,
 } from '@chakra-ui/react';
-import { ArrowUpIcon, ArrowDownIcon, ChatIcon, CheckCircleIcon } from '@chakra-ui/icons';
+import { ChatIcon, CheckCircleIcon } from '@chakra-ui/icons';
 import { Link as RouterLink } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import HtmlContent from '../components/HtmlContent';
+import VoteButtons from '../components/VoteButtons';
 import { questionsAPI } from '../services/api';
 import { handleAPIError } from '../utils/errorHandler';
 import { setOwnershipFlags } from '../utils/dataTransformers';
@@ -121,10 +121,26 @@ const HomePage = () => {
     const questionVotes = question.votes || 0;
     const questionAnswers = question.answers || 0;
     const questionCreatedAt = question.createdAt || '';
+    const questionVotesArray = question.votesArray || [];
     
     // Check if any answer is accepted (for questions with accepted answers)
     const hasAcceptedAnswer = question.hasAcceptedAnswer || 
       (question.answers && Array.isArray(question.answers) && question.answers.some(answer => answer.isAccepted));
+
+    // Handle vote updates for this question
+    const handleQuestionVoteUpdate = (voteData) => {
+      setQuestions(prevQuestions => 
+        prevQuestions.map(q => 
+          q.id === question.id 
+            ? { 
+                ...q, 
+                votes: voteData.votes,
+                votesArray: voteData.votesArray 
+              }
+            : q
+        )
+      );
+    };
 
     return (
       <Card bg={cardBg} border="1px" borderColor={borderColor} mb={{ base: 4, md: 6 }} p={{ base: 4, md: 6 }}>
@@ -165,12 +181,15 @@ const HomePage = () => {
         <CardFooter pt={0}>
           <Flex w="full" align="center" justify="space-between" gap={4}>
             <HStack spacing={{ base: 4, md: 6 }}>
-              <HStack spacing={1}>
-                <Icon as={ArrowUpIcon} color="gray.400" boxSize={{ base: 4, md: 5 }} />
-                <Text fontSize={{ base: "sm", md: "md" }} color="gray.600" fontWeight="medium">
-                  {questionVotes}
-                </Text>
-              </HStack>
+              <VoteButtons
+                itemId={question.id}
+                votes={questionVotes}
+                votesArray={questionVotesArray}
+                isQuestion={true}
+                onVoteUpdate={handleQuestionVoteUpdate}
+                size="sm"
+                layout="horizontal"
+              />
               <HStack spacing={1}>
                 <Icon as={ChatIcon} color="gray.400" boxSize={{ base: 4, md: 5 }} />
                 <Text fontSize={{ base: "sm", md: "md" }} color="gray.600" fontWeight="medium">

@@ -71,4 +71,11 @@ router.post(
   AnswerController.voteAnswer
 );
 
+// Accept answer (only question owner)
+router.post(
+  "/:id/accept",
+  authenticate,
+  AnswerController.acceptAnswer
+);
+
 module.exports = router;

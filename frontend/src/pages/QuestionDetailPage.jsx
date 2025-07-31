@@ -13,11 +13,8 @@ import {
   Flex,
   Avatar,
   Icon,
-  Textarea,
-  Divider,
   useToast,
   useColorModeValue,
-  IconButton,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -27,9 +24,6 @@ import {
   useDisclosure,
 } from '@chakra-ui/react';
 import { 
-  ArrowUpIcon, 
-  ArrowDownIcon, 
-  ChatIcon, 
   CheckCircleIcon,
   StarIcon,
 } from '@chakra-ui/icons';
@@ -41,6 +35,7 @@ import { handleAPIError, showSuccessMessage } from '../utils/errorHandler';
 import { setOwnershipFlags } from '../utils/dataTransformers';
 import RichTextEditor from '../components/RichTextEditor';
 import HtmlContent from '../components/HtmlContent';
+import VoteButtons from '../components/VoteButtons';
 
 const QuestionDetailPage = () => {
   const { id } = useParams();
@@ -124,38 +119,26 @@ const QuestionDetailPage = () => {
     fetchQuestionAndAnswers();
   }, [id, user, toast]);
 
-  const handleVote = async (type, itemId, isQuestion = false) => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Authentication required',
-        description: 'Please log in to vote',
-        status: 'warning',
-        duration: 3000,
-        isClosable: true,
-      });
-      return;
-    }
+  // Handle vote updates for question
+  const handleQuestionVoteUpdate = (voteData) => {
+    setQuestion(prev => ({
+      ...prev,
+      votes: voteData.votes,
+      votesArray: voteData.votesArray
+    }));
+  };
 
-    try {
-      if (isQuestion) {
-        await questionsAPI.vote(itemId, type);
-        setQuestion(prev => ({
-          ...prev,
-          votes: prev.votes + (type === 'up' ? 1 : -1),
-        }));
-      } else {
-        await answersAPI.vote(itemId, type);
-        setAnswers(prev => prev.map(answer => 
-          answer.id === itemId 
-            ? { ...answer, votes: answer.votes + (type === 'up' ? 1 : -1) }
-            : answer
-        ));
-      }
-    } catch (error) {
-      handleAPIError(error, toast, { 
-        defaultMessage: 'Failed to vote' 
-      });
-    }
+  // Handle vote updates for answers
+  const handleAnswerVoteUpdate = (answerId, voteData) => {
+    setAnswers(prev => prev.map(answer => 
+      answer.id === answerId 
+        ? { 
+            ...answer, 
+            votes: voteData.votes,
+            votesArray: voteData.votesArray 
+          }
+        : answer
+    ));
   };
 
   const handleAcceptAnswer = async (answerId) => {
@@ -253,31 +236,7 @@ const QuestionDetailPage = () => {
     }
   };
 
-  const VoteButtons = ({ votes, onVote, itemId, isQuestion = false }) => (
-    <VStack spacing={1}>
-      <IconButton
-        icon={<ArrowUpIcon />}
-        variant="ghost"
-        size={{ base: "sm", md: "md" }}
-        aria-label="Upvote"
-        onClick={() => onVote('up', itemId, isQuestion)}
-        color="gray.400"
-        _hover={{ color: 'green.500' }}
-      />
-      <Text fontSize={{ base: "lg", md: "xl" }} fontWeight="bold" color="gray.700">
-        {votes}
-      </Text>
-      <IconButton
-        icon={<ArrowDownIcon />}
-        variant="ghost"
-        size={{ base: "sm", md: "md" }}
-        aria-label="Downvote"
-        onClick={() => onVote('down', itemId, isQuestion)}
-        color="gray.400"
-        _hover={{ color: 'red.500' }}
-      />
-    </VStack>
-  );
+
 
   if (isLoading) {
     return (
@@ -303,10 +262,12 @@ const QuestionDetailPage = () => {
           <CardHeader pb={4}>
             <Flex align="start" gap={{ base: 4, md: 6 }}>
               <VoteButtons 
-                votes={question.votes} 
-                onVote={handleVote} 
-                itemId={question.id} 
-                isQuestion={true} 
+                itemId={question.id}
+                votes={question.votes}
+                votesArray={question.votesArray || []}
+                isQuestion={true}
+                onVoteUpdate={handleQuestionVoteUpdate}
+                size="md"
               />
               <Box flex={1}>
                 <Heading size={{ base: "lg", md: "xl", lg: "2xl" }} color="gray.800" mb={3}>
@@ -393,9 +354,12 @@ const QuestionDetailPage = () => {
                 <CardBody p={0}>
                   <Flex align="start" gap={{ base: 4, md: 6 }}>
                     <VoteButtons 
-                      votes={answer.votes} 
-                      onVote={handleVote} 
-                      itemId={answer.id} 
+                      itemId={answer.id}
+                      votes={answer.votes}
+                      votesArray={answer.votesArray || []}
+                      isQuestion={false}
+                      onVoteUpdate={(voteData) => handleAnswerVoteUpdate(answer.id, voteData)}
+                      size="md"
                     />
                                          <Box flex={1}>
                        <Flex align="center" justify="space-between" mb={3} gap={4}>
