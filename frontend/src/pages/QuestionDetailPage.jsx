@@ -37,6 +37,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { questionsAPI, answersAPI, aiAPI } from '../services/api';
+import { handleAPIError, showSuccessMessage } from '../utils/errorHandler';
+import { setOwnershipFlags } from '../utils/dataTransformers';
 import RichTextEditor from '../components/RichTextEditor';
 import HtmlContent from '../components/HtmlContent';
 
@@ -66,59 +68,60 @@ const QuestionDetailPage = () => {
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Mock data - replace with API calls
+  // Fetch real data from API
   useEffect(() => {
-    const fetchQuestion = async () => {
+    const fetchQuestionAndAnswers = async () => {
+      if (!id) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      
       try {
-        // Mock data for now
-        setQuestion({
-          id: parseInt(id),
-          title: 'How to implement authentication in React with JWT?',
-          content: 'I need help implementing JWT authentication in my React application. I want to create a secure login system that persists user sessions. Can someone provide a step-by-step guide with best practices?',
-          author: 'John Doe',
-          authorAvatar: 'https://bit.ly/john-doe',
-          tags: ['react', 'jwt', 'authentication'],
-          votes: 15,
-          createdAt: '2 hours ago',
-          isOwner: user?.id === 1,
-        });
-        
-        setAnswers([
-          {
-            id: 1,
-            content: 'Here\'s a comprehensive guide to implement JWT authentication in React...',
-            author: 'Jane Smith',
-            authorAvatar: 'https://bit.ly/jane-smith',
-            votes: 8,
-            isAccepted: true,
-            createdAt: '1 hour ago',
-            isOwner: false,
-          },
-          {
-            id: 2,
-            content: 'I recommend using a library like Auth0 or Firebase Auth for production apps...',
-            author: 'Mike Johnson',
-            authorAvatar: 'https://bit.ly/mike-johnson',
-            votes: 5,
-            isAccepted: false,
-            createdAt: '30 minutes ago',
-            isOwner: false,
-          },
+        // Fetch question and answers in parallel
+        const [questionResponse, answersResponse] = await Promise.all([
+          questionsAPI.getById(id),
+          answersAPI.getByQuestionId(id)
         ]);
+
+        // Process question data
+        const questionData = questionResponse.data;
+        if (questionData) {
+          // Set ownership flag based on current user
+          questionData.isOwner = user && questionData.userId === user.id;
+          setQuestion(questionData);
+        } else {
+          setQuestion(null);
+        }
+
+        // Process answers data
+        const answersData = answersResponse.data || [];
+        // Set ownership flags for answers
+        const answersWithOwnership = setOwnershipFlags(answersData, user);
+        setAnswers(answersWithOwnership);
+
       } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to load question',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
+        console.error('Error fetching question and answers:', error);
+        
+        // Handle specific error cases
+        if (error.response?.status === 404) {
+          setQuestion(null);
+          setAnswers([]);
+          handleAPIError(error, toast, { 
+            defaultMessage: 'Question not found' 
+          });
+        } else {
+          handleAPIError(error, toast, { 
+            defaultMessage: 'Failed to load question and answers' 
+          });
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchQuestion();
+    fetchQuestionAndAnswers();
   }, [id, user, toast]);
 
   const handleVote = async (type, itemId, isQuestion = false) => {
@@ -149,12 +152,8 @@ const QuestionDetailPage = () => {
         ));
       }
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to vote',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
+      handleAPIError(error, toast, { 
+        defaultMessage: 'Failed to vote' 
       });
     }
   };
@@ -166,20 +165,10 @@ const QuestionDetailPage = () => {
         ...answer,
         isAccepted: answer.id === answerId,
       })));
-      toast({
-        title: 'Answer accepted',
-        description: 'The answer has been marked as accepted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      showSuccessMessage(toast, 'Answer accepted', 'The answer has been marked as accepted');
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to accept answer',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
+      handleAPIError(error, toast, { 
+        defaultMessage: 'Failed to accept answer' 
       });
     }
   };
@@ -201,37 +190,24 @@ const QuestionDetailPage = () => {
     setIsSubmittingAnswer(true);
     
     try {
-      const response = await answersAPI.create(id, { content: newAnswer });
+      const response = await answersAPI.create({ 
+        content: newAnswer, 
+        questionId: id 
+      });
       
-      const newAnswerObj = {
-        id: response.data.id,
-        content: newAnswer,
-        author: user.name,
-        authorAvatar: user.avatar,
-        votes: 0,
-        isAccepted: false,
-        createdAt: 'Just now',
-        isOwner: false,
-      };
+      // Use the transformed answer data from the API response
+      const newAnswerData = response.data;
       
-      setAnswers(prev => [newAnswerObj, ...prev]);
+      // Set ownership flag for the new answer
+      newAnswerData.isOwner = true;
+      
+      setAnswers(prev => [newAnswerData, ...prev]);
       setNewAnswer('');
       
-      toast({
-        title: 'Answer posted',
-        description: 'Your answer has been successfully posted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      showSuccessMessage(toast, 'Answer posted', 'Your answer has been successfully posted');
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Failed to post answer';
-      toast({
-        title: 'Error',
-        description: errorMessage,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
+      handleAPIError(error, toast, { 
+        defaultMessage: 'Failed to post answer' 
       });
     } finally {
       setIsSubmittingAnswer(false);
@@ -356,10 +332,10 @@ const QuestionDetailPage = () => {
           <CardFooter pt={4}>
             <Flex w="full" justify="space-between" align="center" gap={4}>
               <HStack spacing={3}>
-                <Avatar size={{ base: "sm", md: "md" }} name={question.author} src={question.authorAvatar} />
+                <Avatar size={{ base: "sm", md: "md" }} name={question.author?.name || question.author} src={question.author?.avatar} />
                 <VStack align="start" spacing={0}>
                   <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium" color="gray.800">
-                    {question.author}
+                    {question.author?.name || question.author}
                   </Text>
                   <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
                     {question.createdAt}
@@ -424,11 +400,11 @@ const QuestionDetailPage = () => {
                                          <Box flex={1}>
                        <Flex align="center" justify="space-between" mb={3} gap={4}>
                          <HStack spacing={3}>
-                           <Avatar size={{ base: "sm", md: "md" }} name={answer.author} src={answer.authorAvatar} />
+                           <Avatar size={{ base: "sm", md: "md" }} name={answer.author?.name || answer.author} src={answer.author?.avatar} />
                          
                            <VStack align="start" spacing={0}>
                              <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium" color="gray.800">
-                               {answer.author}
+                               {answer.author?.name || answer.author}
                                {answer.isAI && (
                                  <Badge ml={2} colorScheme="purple" size={{ base: "sm", md: "md" }}>
                                    AI
