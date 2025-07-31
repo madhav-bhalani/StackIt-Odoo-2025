@@ -26,8 +26,9 @@ export const transformQuestionFromAPI = (backendQuestion) => {
     content: backendQuestion.description, // Backend uses 'description', frontend expects 'content'
     tags: extractTagsFromBackend(backendQuestion.tags),
     author: transformUserFromAPI(backendQuestion.user),
-    votes: calculateVoteScore(backendQuestion.votes),
-    answers: backendQuestion.answers?.length || 0,
+    votes: backendQuestion.votes || calculateVoteScore(backendQuestion.votesArray || []),
+    votesArray: backendQuestion.votesArray || backendQuestion.votes || [],
+    answers: typeof backendQuestion.answers === 'number' ? backendQuestion.answers : (backendQuestion.answers?.length || 0),
     isOwner: false, // Will be set based on current user context
     createdAt: formatRelativeTime(backendQuestion.createdAt)
   };
@@ -54,7 +55,8 @@ export const transformAnswerFromAPI = (backendAnswer) => {
   return {
     ...backendAnswer,
     author: transformUserFromAPI(backendAnswer.user),
-    votes: calculateVoteScore(backendAnswer.votes),
+    votes: backendAnswer.votes || calculateVoteScore(backendAnswer.votesArray || []),
+    votesArray: backendAnswer.votesArray || backendAnswer.votes || [],
     isOwner: false, // Will be set based on current user context
     createdAt: formatRelativeTime(backendAnswer.createdAt)
   };

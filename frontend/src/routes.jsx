@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import AskQuestionPage from './pages/AskQuestionPage';
 import QuestionDetailPage from './pages/QuestionDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 
 const router = createBrowserRouter([
   {
@@ -18,11 +19,19 @@ const router = createBrowserRouter([
       },
       {
         path: 'login',
-        element: <LoginPage />,
+        element: (
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        ),
       },
       {
         path: 'register',
-        element: <RegisterPage />,
+        element: (
+          <PublicRoute>
+            <RegisterPage />
+          </PublicRoute>
+        ),
       },
       {
         path: 'ask',

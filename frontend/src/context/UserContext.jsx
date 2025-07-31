@@ -44,33 +44,35 @@ const userReducer = (state, action) => {
 export const UserProvider = ({ children }) => {
   const [state, dispatch] = useReducer(userReducer, initialState);
 
-  // Check for existing token on app load
+  // Check for existing token on app load - ONLY ONCE
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuth = () => {
       const token = localStorage.getItem('token');
-      if (token) {
+      const storedUser = localStorage.getItem('user');
+      
+      if (token && storedUser) {
         try {
-          const response = await authAPI.getCurrentUser();
-          const user = response.data?.data?.user;
-          if (user) {
-            // Add a .name property for Navbar display
-            user.name = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email;
-            dispatch({ type: 'SET_USER', payload: user });
-          } else {
-            dispatch({ type: 'SET_USER', payload: null });
-          }
-        } catch (error) {
+          const parsedUser = JSON.parse(storedUser);
+          parsedUser.name = parsedUser.firstName && parsedUser.lastName 
+            ? `${parsedUser.firstName} ${parsedUser.lastName}` 
+            : parsedUser.email;
+          dispatch({ type: 'SET_USER', payload: parsedUser });
+        } catch (parseError) {
+          console.warn('Failed to parse stored user data:', parseError);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          dispatch({ type: 'SET_ERROR', payload: 'Authentication failed' });
+          dispatch({ type: 'SET_LOADING', payload: false });
         }
       } else {
+        // No token or user data
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
 
     checkAuth();
-  }, []);
+  }, []); // Only run once on mount
 
   const login = async (credentials) => {
     dispatch({ type: 'SET_LOADING', payload: true });

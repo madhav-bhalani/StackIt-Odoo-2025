@@ -1,177 +1,192 @@
-/**
- * Test script for the improved voting system with outlined icons and separate counts
- */
+// Test script to verify improved voting functionality
+// This is a simple Node.js test script
 
-// Test the improved voting UI components
-const testImprovedVotingUI = () => {
-  console.log('🎨 Testing Improved Voting UI...');
+// Mock the data transformers functions
+const transformUserFromAPI = (backendUser) => {
+  if (!backendUser) return null;
   
-  // Test vote count calculations
-  const testVotesArrays = [
-    // No votes
-    [],
-    // Only upvotes
-    [
-      { userId: '1', voteType: 'UP' },
-      { userId: '2', voteType: 'UP' },
-      { userId: '3', voteType: 'UP' }
-    ],
-    // Only downvotes
-    [
-      { userId: '1', voteType: 'DOWN' },
-      { userId: '2', voteType: 'DOWN' }
-    ],
-    // Mixed votes
-    [
-      { userId: '1', voteType: 'UP' },
-      { userId: '2', voteType: 'UP' },
-      { userId: '3', voteType: 'DOWN' },
-      { userId: '4', voteType: 'UP' },
-      { userId: '5', voteType: 'DOWN' }
-    ]
-  ];
-
-  testVotesArrays.forEach((votes, index) => {
-    const upvotes = votes.filter(vote => vote.voteType === 'UP').length;
-    const downvotes = votes.filter(vote => vote.voteType === 'DOWN').length;
-    const netScore = votes.reduce((score, vote) => score + (vote.voteType === 'UP' ? 1 : -1), 0);
-    
-    console.log(`✅ Test ${index + 1}:`);
-    console.log(`   Total votes: ${votes.length}`);
-    console.log(`   Upvotes: ${upvotes} (green)`);
-    console.log(`   Downvotes: ${downvotes} (red)`);
-    console.log(`   Net score: ${netScore}`);
-    console.log('');
-  });
-
-  console.log('🎉 Vote count calculations working correctly!');
-};
-
-// Test user vote detection
-const testUserVoteDetection = () => {
-  console.log('👤 Testing User Vote Detection...');
-  
-  const testUserId = 'user123';
-  const votesWithUserUpvote = [
-    { userId: 'user1', voteType: 'UP' },
-    { userId: testUserId, voteType: 'UP' },
-    { userId: 'user2', voteType: 'DOWN' }
-  ];
-  
-  const votesWithUserDownvote = [
-    { userId: 'user1', voteType: 'UP' },
-    { userId: testUserId, voteType: 'DOWN' },
-    { userId: 'user2', voteType: 'UP' }
-  ];
-  
-  const votesWithoutUser = [
-    { userId: 'user1', voteType: 'UP' },
-    { userId: 'user2', voteType: 'DOWN' }
-  ];
-
-  // Simulate getUserVote function
-  const getUserVote = (votes, userId) => {
-    if (!Array.isArray(votes) || !userId) return null;
-    const userVote = votes.find(vote => vote.userId === userId);
-    return userVote ? userVote.voteType : null;
+  return {
+    id: backendUser.id,
+    name: `${backendUser.firstName} ${backendUser.lastName}`.trim() || backendUser.email,
+    email: backendUser.email,
+    avatar: backendUser.avatar || null
   };
-
-  const userUpvote = getUserVote(votesWithUserUpvote, testUserId);
-  const userDownvote = getUserVote(votesWithUserDownvote, testUserId);
-  const noUserVote = getUserVote(votesWithoutUser, testUserId);
-
-  console.log(`✅ User upvote detection: ${userUpvote === 'UP' ? 'PASS' : 'FAIL'} (${userUpvote})`);
-  console.log(`✅ User downvote detection: ${userDownvote === 'DOWN' ? 'PASS' : 'FAIL'} (${userDownvote})`);
-  console.log(`✅ No user vote detection: ${noUserVote === null ? 'PASS' : 'FAIL'} (${noUserVote})`);
-  
-  console.log('🎉 User vote detection working correctly!');
 };
 
-// Test API integration
-const testVotingAPI = async () => {
-  console.log('🔌 Testing Voting API Integration...');
+const calculateVoteScore = (votes) => {
+  if (!Array.isArray(votes)) return 0;
   
-  try {
-    // Check if we have a token
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.warn('⚠️ No authentication token found. Please log in to test API calls.');
-      return;
+  return votes.reduce((score, vote) => {
+    return score + (vote.voteType === 'UP' ? 1 : -1);
+  }, 0);
+};
+
+const extractTagsFromBackend = (backendTags) => {
+  if (!Array.isArray(backendTags)) return [];
+  
+  return backendTags.map(tagRelation => {
+    // Handle both direct tag objects and QuestionTag relationships
+    if (tagRelation.tag && tagRelation.tag.name) {
+      return tagRelation.tag.name;
     }
-
-    // Get questions to test with
-    const response = await fetch('/api/questions?limit=1');
-    const data = await response.json();
-    
-    if (!data.data?.questions?.length) {
-      console.warn('⚠️ No questions found to test voting API.');
-      return;
+    if (tagRelation.name) {
+      return tagRelation.name;
     }
+    if (typeof tagRelation === 'string') {
+      return tagRelation;
+    }
+    return null;
+  }).filter(Boolean);
+};
 
-    const testQuestion = data.data.questions[0];
-    console.log(`📋 Testing with question: "${testQuestion.title}"`);
-    console.log(`📊 Current vote data:`, {
-      netScore: testQuestion.votes,
-      votesArray: testQuestion.votesArray || [],
-      upvotes: (testQuestion.votesArray || []).filter(v => v.voteType === 'UP').length,
-      downvotes: (testQuestion.votesArray || []).filter(v => v.voteType === 'DOWN').length
-    });
-
-    console.log('✅ API integration structure looks good!');
-    console.log('ℹ️ Use the actual voting buttons in the UI to test full functionality.');
-
-  } catch (error) {
-    console.error('❌ API test failed:', error);
+const formatRelativeTime = (timestamp) => {
+  if (!timestamp) return '';
+  
+  const now = new Date();
+  const time = new Date(timestamp);
+  const diffInSeconds = Math.floor((now - time) / 1000);
+  
+  if (diffInSeconds < 60) {
+    return 'Just now';
   }
+  
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+  }
+  
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+  }
+  
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+  }
+  
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
+  }
+  
+  const diffInYears = Math.floor(diffInMonths / 12);
+  return `${diffInYears} year${diffInYears === 1 ? '' : 's'} ago`;
 };
 
-// Test layout configurations
-const testLayoutConfigurations = () => {
-  console.log('📐 Testing Layout Configurations...');
+const transformAnswerFromAPI = (backendAnswer) => {
+  if (!backendAnswer) return null;
   
-  const layouts = ['vertical', 'horizontal'];
-  const sizes = ['sm', 'md', 'lg'];
-  
-  layouts.forEach(layout => {
-    sizes.forEach(size => {
-      console.log(`✅ Layout: ${layout}, Size: ${size} - Configuration available`);
-    });
-  });
-  
-  console.log('🎉 All layout configurations supported!');
+  return {
+    ...backendAnswer,
+    author: transformUserFromAPI(backendAnswer.user),
+    votes: backendAnswer.votes || calculateVoteScore(backendAnswer.votesArray || []),
+    votesArray: backendAnswer.votesArray || backendAnswer.votes || [],
+    isOwner: false, // Will be set based on current user context
+    createdAt: formatRelativeTime(backendAnswer.createdAt)
+  };
 };
 
-// Main test function
-const runImprovedVotingTests = () => {
-  console.log('🚀 Running Improved Voting System Tests...\n');
+const transformQuestionFromAPI = (backendQuestion) => {
+  if (!backendQuestion) return null;
   
-  testImprovedVotingUI();
-  console.log('---\n');
-  
-  testUserVoteDetection();
-  console.log('---\n');
-  
-  testLayoutConfigurations();
-  console.log('---\n');
-  
-  testVotingAPI();
-  console.log('---\n');
-  
-  console.log('🎉 All tests completed!');
-  console.log('\n📋 Summary of Improvements:');
-  console.log('✅ Outlined triangle icons (more visible)');
-  console.log('✅ Separate upvote/downvote counts (green/red)');
-  console.log('✅ Horizontal layout for HomePage');
-  console.log('✅ Vertical layout for QuestionDetailPage');
-  console.log('✅ Better visual feedback and tooltips');
-  console.log('✅ Proper color coding and states');
+  return {
+    ...backendQuestion,
+    content: backendQuestion.description, // Backend uses 'description', frontend expects 'content'
+    tags: extractTagsFromBackend(backendQuestion.tags),
+    author: transformUserFromAPI(backendQuestion.user),
+    votes: backendQuestion.votes || calculateVoteScore(backendQuestion.votesArray || []),
+    votesArray: backendQuestion.votesArray || backendQuestion.votes || [],
+    answers: backendQuestion.answers?.length || 0,
+    isOwner: false, // Will be set based on current user context
+    createdAt: formatRelativeTime(backendQuestion.createdAt)
+  };
 };
 
-// Export for browser console
-window.runImprovedVotingTests = runImprovedVotingTests;
-window.testImprovedVotingUI = testImprovedVotingUI;
-window.testUserVoteDetection = testUserVoteDetection;
-window.testVotingAPI = testVotingAPI;
+// Test data that simulates backend response
+const mockBackendAnswer = {
+  id: 'answer-123',
+  content: 'This is a test answer',
+  isAccepted: false,
+  createdAt: '2025-07-31T09:18:27.780Z',
+  updatedAt: '2025-07-31T09:18:27.780Z',
+  userId: 'user-123',
+  questionId: 'question-123',
+  user: {
+    id: 'user-123',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com'
+  },
+  votes: 1,
+  votesArray: [
+    { userId: 'user-123', voteType: 'UP' }
+  ]
+};
 
-console.log('🧪 Improved Voting System Tests Loaded!');
-console.log('Run runImprovedVotingTests() to run all tests');
+const mockBackendQuestion = {
+  id: 'question-123',
+  title: 'Test Question',
+  description: 'This is a test question',
+  createdAt: '2025-07-31T09:18:27.780Z',
+  updatedAt: '2025-07-31T09:18:27.780Z',
+  userId: 'user-123',
+  user: {
+    id: 'user-123',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'john@example.com'
+  },
+  tags: [
+    { tag: { name: 'javascript' } },
+    { tag: { name: 'react' } }
+  ],
+  votes: 2,
+  votesArray: [
+    { userId: 'user-123', voteType: 'UP' },
+    { userId: 'user-456', voteType: 'UP' }
+  ],
+  answers: []
+};
+
+console.log('🧪 Testing improved data transformations...\n');
+
+// Test answer transformation
+console.log('1. Testing answer transformation:');
+const transformedAnswer = transformAnswerFromAPI(mockBackendAnswer);
+console.log('✅ Transformed answer:', JSON.stringify(transformedAnswer, null, 2));
+
+// Verify answer has correct vote data
+if (transformedAnswer.votes === 1 && transformedAnswer.votesArray.length === 1) {
+  console.log('✅ Answer vote data is correct');
+} else {
+  console.log('❌ Answer vote data is incorrect');
+}
+
+// Test question transformation
+console.log('\n2. Testing question transformation:');
+const transformedQuestion = transformQuestionFromAPI(mockBackendQuestion);
+console.log('✅ Transformed question:', JSON.stringify(transformedQuestion, null, 2));
+
+// Verify question has correct vote data
+if (transformedQuestion.votes === 2 && transformedQuestion.votesArray.length === 2) {
+  console.log('✅ Question vote data is correct');
+} else {
+  console.log('❌ Question vote data is incorrect');
+}
+
+// Verify question content transformation
+if (transformedQuestion.content === mockBackendQuestion.description) {
+  console.log('✅ Question content transformation is correct');
+} else {
+  console.log('❌ Question content transformation is incorrect');
+}
+
+// Verify tags transformation
+if (transformedQuestion.tags.length === 2 && transformedQuestion.tags.includes('javascript')) {
+  console.log('✅ Question tags transformation is correct');
+} else {
+  console.log('❌ Question tags transformation is incorrect');
+}
+
+console.log('\n🎉 Data transformation tests completed!');

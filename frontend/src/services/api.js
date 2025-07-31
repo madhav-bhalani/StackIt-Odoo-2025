@@ -10,12 +10,53 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Simple cache for GET requests to prevent duplicate calls
+const requestCache = new Map();
+const CACHE_DURATION = 30000; // 30 seconds
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Helper function to create cache key
+const createCacheKey = (method, url, params) => {
+  return `${method}:${url}:${JSON.stringify(params || {})}`;
+};
+
+// Helper function to check cache
+const getCachedResponse = (cacheKey) => {
+  const cached = requestCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+  return null;
+};
+
+// Helper function to set cache
+const setCachedResponse = (cacheKey, data) => {
+  requestCache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+};
+
+// Helper function to clear cache
+const clearCache = (pattern) => {
+  if (pattern) {
+    // Clear specific cache entries matching pattern
+    for (const [key] of requestCache) {
+      if (key.includes(pattern)) {
+        requestCache.delete(key);
+      }
+    }
+  } else {
+    // Clear all cache
+    requestCache.clear();
+  }
+};
 
 // Request interceptor to add JWT token
 api.interceptors.request.use(
@@ -36,9 +77,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Don't redirect if this is the getCurrentUser call (auth check)
+      // Let the UserContext handle this case
+      const isAuthCheck = error.config?.url?.includes('/auth/me');
+      
+      if (!isAuthCheck) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -57,6 +104,14 @@ export const authAPI = {
 // Questions API
 export const questionsAPI = {
   getAll: async (params) => {
+    const cacheKey = createCacheKey('GET', '/questions', params);
+    const cached = getCachedResponse(cacheKey);
+    
+    if (cached) {
+      console.log('📦 Using cached questions data');
+      return cached;
+    }
+    
     const response = await api.get('/questions', { params });
     const data = extractAPIData(response);
     
@@ -65,7 +120,9 @@ export const questionsAPI = {
       data.questions = data.questions.map(transformQuestionFromAPI);
     }
     
-    return { ...response, data };
+    const transformedResponse = { ...response, data };
+    setCachedResponse(cacheKey, transformedResponse);
+    return transformedResponse;
   },
   
   getById: async (id) => {

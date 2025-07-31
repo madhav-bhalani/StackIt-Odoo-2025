@@ -111,16 +111,17 @@ export const useVoting = () => {
 
       // Handle successful response
       if (response.data) {
-        const actualVotes = response.data.votes || response.data.data?.votes;
-        if (actualVotes) {
-          // Update with actual data from server
-          if (onUpdate) {
-            onUpdate({
-              votes: calculateVoteScore(actualVotes),
-              votesArray: actualVotes,
-              userVote: getUserVote(actualVotes, user.id)
-            });
-          }
+        const responseData = response.data.data || response.data;
+        const actualVotesArray = responseData.votesArray || responseData.votes || [];
+        const actualVoteScore = responseData.votes || calculateVoteScore(actualVotesArray);
+        
+        // Update with actual data from server
+        if (onUpdate) {
+          onUpdate({
+            votes: actualVoteScore,
+            votesArray: actualVotesArray,
+            userVote: getUserVote(actualVotesArray, user.id)
+          });
         }
       }
 

@@ -35,15 +35,18 @@ const VoteButtons = ({
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
+  // Ensure votesArray is always an array
+  const safeVotesArray = Array.isArray(votesArray) ? votesArray : [];
+  
   // Get current user's vote
-  const userVote = getUserVote(votesArray, user?.id);
+  const userVote = getUserVote(safeVotesArray, user?.id);
   const isUpvoted = userVote === 'UP';
   const isDownvoted = userVote === 'DOWN';
   const isCurrentlyVoting = isVoting(itemId);
 
   // Calculate separate up and down counts
-  const upvotes = votesArray.filter(vote => vote.voteType === 'UP').length;
-  const downvotes = votesArray.filter(vote => vote.voteType === 'DOWN').length;
+  const upvotes = safeVotesArray.filter(vote => vote.voteType === 'UP').length;
+  const downvotes = safeVotesArray.filter(vote => vote.voteType === 'DOWN').length;
 
   // Handle vote click
   const handleVoteClick = async (voteType) => {
@@ -51,7 +54,7 @@ const VoteButtons = ({
       itemId, 
       voteType, 
       isQuestion, 
-      votesArray, 
+      safeVotesArray, 
       onVoteUpdate
     );
   };

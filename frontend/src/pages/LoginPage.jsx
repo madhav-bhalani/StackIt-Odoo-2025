@@ -96,7 +96,7 @@ const LoginPage = () => {
           duration: 3000,
           isClosable: true,
         });
-        navigate('/');
+        navigate(from, { replace: true });
       } else {
         let description = result.error || 'Login failed';
         if (description.toLowerCase().includes('invalid')) {

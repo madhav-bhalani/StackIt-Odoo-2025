@@ -108,7 +108,15 @@ const HomePage = () => {
   // Initial load
   useEffect(() => {
     fetchQuestions();
-  }, [user]); // Re-fetch when user changes to set ownership flags
+  }, []); // Only fetch on initial load
+  
+  // Update ownership flags when user changes (without re-fetching)
+  useEffect(() => {
+    if (user && questions.length > 0) {
+      const questionsWithOwnership = setOwnershipFlags(questions, user);
+      setQuestions(questionsWithOwnership);
+    }
+  }, [user]); // Only update ownership flags when user changes
 
   const QuestionCard = ({ question }) => {
     // Handle cases where question data might be incomplete

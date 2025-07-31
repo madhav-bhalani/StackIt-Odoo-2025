@@ -16,7 +16,7 @@ import {
   useToast,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useUser } from '../context/UserContext';
 
@@ -33,10 +33,13 @@ const RegisterPage = () => {
   
   const { register } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   
   const cardBg = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  
+  const from = location.state?.from?.pathname || '/';
 
   const validateForm = () => {
     const newErrors = {};
@@ -115,7 +118,7 @@ const RegisterPage = () => {
           duration: 3000,
           isClosable: true,
         });
-        navigate('/');
+        navigate(from, { replace: true });
       } else {
         let description = result.error || 'Registration failed';
         if (description.toLowerCase().includes('email') && description.toLowerCase().includes('exist')) {

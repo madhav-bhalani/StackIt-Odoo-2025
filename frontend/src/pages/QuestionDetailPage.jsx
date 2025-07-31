@@ -22,15 +22,29 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
 import { 
   CheckCircleIcon,
   StarIcon,
+  EditIcon,
+  DeleteIcon,
+  ChevronDownIcon,
 } from '@chakra-ui/icons';
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import { questionsAPI, answersAPI, aiAPI } from '../services/api';
+import { questionsAPI, answersAPI } from '../services/api';
 import { handleAPIError, showSuccessMessage } from '../utils/errorHandler';
 import { setOwnershipFlags } from '../utils/dataTransformers';
 import RichTextEditor from '../components/RichTextEditor';
@@ -40,7 +54,6 @@ import VoteButtons from '../components/VoteButtons';
 const QuestionDetailPage = () => {
   const { id } = useParams();
   const { isAuthenticated, user } = useUser();
-  const navigate = useNavigate();
   const toast = useToast();
   
   const [question, setQuestion] = useState(null);
@@ -52,6 +65,16 @@ const QuestionDetailPage = () => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [summaryText, setSummaryText] = useState('');
   const [summaryTitle, setSummaryTitle] = useState('');
+  
+  // Answer editing state
+  const [editingAnswerId, setEditingAnswerId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [isUpdatingAnswer, setIsUpdatingAnswer] = useState(false);
+  
+  // Answer deletion state
+  const [deletingAnswerId, setDeletingAnswerId] = useState(null);
+  const [isDeletingAnswer, setIsDeletingAnswer] = useState(false);
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
 
   const openSummary = (title, summary) => {
     setSummaryTitle(title);
@@ -236,6 +259,84 @@ const QuestionDetailPage = () => {
     }
   };
 
+  // Handle answer editing
+  const handleEditAnswer = (answer) => {
+    setEditingAnswerId(answer.id);
+    setEditingContent(answer.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAnswerId(null);
+    setEditingContent('');
+  };
+
+  const handleUpdateAnswer = async (answerId) => {
+    if (!editingContent.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Answer content cannot be empty',
+        status: 'warning',
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsUpdatingAnswer(true);
+    
+    try {
+      const response = await answersAPI.update(answerId, { content: editingContent });
+      
+      // Update the answer in the local state
+      setAnswers(prev => prev.map(answer => 
+        answer.id === answerId 
+          ? { ...answer, content: response.data.content }
+          : answer
+      ));
+      
+      // Reset editing state
+      setEditingAnswerId(null);
+      setEditingContent('');
+      
+      showSuccessMessage(toast, 'Answer updated', 'Your answer has been successfully updated');
+    } catch (error) {
+      handleAPIError(error, toast, { 
+        defaultMessage: 'Failed to update answer' 
+      });
+    } finally {
+      setIsUpdatingAnswer(false);
+    }
+  };
+
+  // Handle answer deletion
+  const handleDeleteAnswer = (answerId) => {
+    setDeletingAnswerId(answerId);
+    onDeleteOpen();
+  };
+
+  const confirmDeleteAnswer = async () => {
+    if (!deletingAnswerId) return;
+
+    setIsDeletingAnswer(true);
+    
+    try {
+      await answersAPI.delete(deletingAnswerId);
+      
+      // Remove the answer from local state
+      setAnswers(prev => prev.filter(answer => answer.id !== deletingAnswerId));
+      
+      showSuccessMessage(toast, 'Answer deleted', 'Your answer has been successfully deleted');
+    } catch (error) {
+      handleAPIError(error, toast, { 
+        defaultMessage: 'Failed to delete answer' 
+      });
+    } finally {
+      setIsDeletingAnswer(false);
+      setDeletingAnswerId(null);
+      onDeleteClose();
+    }
+  };
+
 
 
   if (isLoading) {
@@ -361,76 +462,133 @@ const QuestionDetailPage = () => {
                       onVoteUpdate={(voteData) => handleAnswerVoteUpdate(answer.id, voteData)}
                       size="md"
                     />
-                                         <Box flex={1}>
-                       <Flex align="center" justify="space-between" mb={3} gap={4}>
-                         <HStack spacing={3}>
-                           <Avatar size={{ base: "sm", md: "md" }} name={answer.author?.name || answer.author} src={answer.author?.avatar} />
+                    <Box flex={1}>
+                      <Flex align="center" justify="space-between" mb={3} gap={4}>
+                        <HStack spacing={3}>
+                          <Avatar size={{ base: "sm", md: "md" }} name={answer.author?.name || answer.author} src={answer.author?.avatar} />
+                        
+                          <VStack align="start" spacing={0}>
+                            <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium" color="gray.800">
+                              {answer.author?.name || answer.author}
+                              {answer.isAI && (
+                                <Badge ml={2} colorScheme="purple" size={{ base: "sm", md: "md" }}>
+                                  AI
+                                </Badge>
+                              )}
+                            </Text>
+                            <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
+                              {answer.createdAt}
+                            </Text>
+                          </VStack>
+                          {answer.isAccepted && (
+                            <VStack align="start" spacing={0} ml={2}>
+                              <Icon as={CheckCircleIcon} color="green.500" boxSize={{ base: 5, md: 6 }} />
+                              <Text fontSize={{ base: "xs", md: "sm" }} color="green.600">
+                                Accepted answer
+                              </Text>
+                            </VStack>
+                          )}
+                        </HStack>
+                        
+                        <HStack spacing={3}>
+                          <Button
+                            size={{ base: "xs", md: "sm" }}
+                            fontWeight="bold"
+                            leftIcon={<span role="img" aria-label="sparkle">✨</span>}
+                            bgGradient="linear(to-r, purple.500, pink.400, yellow.400)"
+                            color="white"
+                            _hover={{ bgGradient: 'linear(to-r, pink.400, yellow.400, purple.500)', filter: 'brightness(1.1)' }}
+                            _active={{ bgGradient: 'linear(to-r, yellow.400, purple.500, pink.400)' }}
+                            sx={{
+                              animation: 'shine 2s linear infinite',
+                              '@keyframes shine': {
+                                '0%': { backgroundPosition: '0% 50%' },
+                                '100%': { backgroundPosition: '100% 50%' },
+                              },
+                            }}
+                            variant="solid"
+                            onClick={() => openSummary('Answer Summary', 'This is a simple summary of the answer in plain language.')}
+                          >
+                            AI Summarize
+                          </Button>
                          
-                           <VStack align="start" spacing={0}>
-                             <Text fontSize={{ base: "sm", md: "md" }} fontWeight="medium" color="gray.800">
-                               {answer.author?.name || answer.author}
-                               {answer.isAI && (
-                                 <Badge ml={2} colorScheme="purple" size={{ base: "sm", md: "md" }}>
-                                   AI
-                                 </Badge>
-                               )}
-                             </Text>
-                             <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
-                               {answer.createdAt}
-                             </Text>
-                           </VStack>
-                           {answer.isAccepted && (
-                             <VStack align="start" spacing={0} ml={2}>
-                               <Icon as={CheckCircleIcon} color="green.500" boxSize={{ base: 5, md: 6 }} />
-                               <Text fontSize={{ base: "xs", md: "sm" }} color="green.600">
-                                 Accepted answer
-                               </Text>
-                             </VStack>
-                           )}
-                         </HStack>
-                         
-                         <HStack spacing={3}>
-                           <Button
-                             size={{ base: "xs", md: "sm" }}
-                             fontWeight="bold"
-                             leftIcon={<span role="img" aria-label="sparkle">✨</span>}
-                             bgGradient="linear(to-r, purple.500, pink.400, yellow.400)"
-                             color="white"
-                             _hover={{ bgGradient: 'linear(to-r, pink.400, yellow.400, purple.500)', filter: 'brightness(1.1)' }}
-                             _active={{ bgGradient: 'linear(to-r, yellow.400, purple.500, pink.400)' }}
-                             sx={{
-                               animation: 'shine 2s linear infinite',
-                               '@keyframes shine': {
-                                 '0%': { backgroundPosition: '0% 50%' },
-                                 '100%': { backgroundPosition: '100% 50%' },
-                               },
-                             }}
-                             variant="solid"
-                             onClick={() => openSummary('Answer Summary', 'This is a simple summary of the answer in plain language.')}
-                           >
-                             AI Summarize
-                           </Button>
-                          
-                           {question.isOwner && !answer.isAccepted && !answer.isAI && (
-                             <Button
-                               size={{ base: "sm", md: "md" }}
-                               variant="ghost"
-                               colorScheme="green"
-                               onClick={() => handleAcceptAnswer(answer.id)}
-                             >
-                               Accept
-                             </Button>
-                           )}
-                         </HStack>
-                       </Flex>
-                       
-                       <HtmlContent 
-                         content={answer.content} 
-                         color="gray.700" 
-                         lineHeight="tall" 
-                         fontSize={{ base: "md", lg: "lg" }}
-                       />
-                     </Box>
+                          {question.isOwner && !answer.isAccepted && !answer.isAI && (
+                            <Button
+                              size={{ base: "sm", md: "md" }}
+                              variant="ghost"
+                              colorScheme="green"
+                              onClick={() => handleAcceptAnswer(answer.id)}
+                            >
+                              Accept
+                            </Button>
+                          )}
+
+                          {/* Answer owner actions */}
+                          {answer.isOwner && !answer.isAI && (
+                            <Menu>
+                              <MenuButton
+                                as={IconButton}
+                                icon={<ChevronDownIcon />}
+                                variant="ghost"
+                                size={{ base: "sm", md: "md" }}
+                                aria-label="Answer options"
+                              />
+                              <MenuList>
+                                <MenuItem 
+                                  icon={<EditIcon />} 
+                                  onClick={() => handleEditAnswer(answer)}
+                                >
+                                  Edit Answer
+                                </MenuItem>
+                                <MenuItem 
+                                  icon={<DeleteIcon />} 
+                                  onClick={() => handleDeleteAnswer(answer.id)}
+                                  color="red.500"
+                                >
+                                  Delete Answer
+                                </MenuItem>
+                              </MenuList>
+                            </Menu>
+                          )}
+                        </HStack>
+                      </Flex>
+                      
+                      {/* Answer content - show editor if editing, otherwise show content */}
+                      {editingAnswerId === answer.id ? (
+                        <VStack spacing={4} align="stretch">
+                          <RichTextEditor
+                            value={editingContent}
+                            onChange={setEditingContent}
+                            placeholder="Edit your answer..."
+                          />
+                          <HStack spacing={3} justify="flex-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleCancelEdit}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              colorScheme="brand"
+                              onClick={() => handleUpdateAnswer(answer.id)}
+                              isLoading={isUpdatingAnswer}
+                              loadingText="Updating..."
+                            >
+                              Update Answer
+                            </Button>
+                          </HStack>
+                        </VStack>
+                      ) : (
+                        <HtmlContent 
+                          content={answer.content} 
+                          color="gray.700" 
+                          lineHeight="tall" 
+                          fontSize={{ base: "md", lg: "lg" }}
+                        />
+                      )}
+                    </Box>
                   </Flex>
                 </CardBody>
               </Card>
@@ -486,6 +644,40 @@ const QuestionDetailPage = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Delete Answer Confirmation Dialog */}
+      <AlertDialog
+        isOpen={isDeleteOpen}
+        onClose={onDeleteClose}
+        isCentered
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Answer
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete this answer? This action cannot be undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button onClick={onDeleteClose}>
+                Cancel
+              </Button>
+              <Button 
+                colorScheme="red" 
+                onClick={confirmDeleteAnswer}
+                isLoading={isDeletingAnswer}
+                loadingText="Deleting..."
+                ml={3}
+              >
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };
